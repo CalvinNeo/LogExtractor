@@ -185,7 +185,7 @@ class LogSummary:
             f.write("{}\n".format(fa))
             f.write("```\n")
             for x in result[fa]:
-                f.write("{}\n".format(x))
+                f.write("{}\n".format(x.replace("\n", "")))
             f.write("```\n")
         f.close()
 
