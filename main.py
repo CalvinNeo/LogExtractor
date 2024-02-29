@@ -121,14 +121,15 @@ class LogItemExtractor:
                 self.features.append("")
             elif is_like_log_level(e):
                 self.features.append("")
-            elif len(e) > 15:
+            elif len(e) > 45:
                 self.features.append("")
             else:
                 self.features.append(e)
 
     def digest(self):
         c = dict(Counter(self.features))
-        topk = [(k, c[k]) for k in sorted(c, key = c.get, reverse = True) if k != ""]
+        # topk = [(k, c[k]) for k in sorted(c, key = c.get, reverse = True) if k != ""]
+        topk = [(k, c[k]) for k in self.features if k != ""]
         if len(topk) == 0:
             return ""
         n = int(len(topk) * 0.3)
@@ -218,11 +219,13 @@ def test_digest():
     print(ex.features, ex.digest())
     ex = LogItemExtractor(ctx, "[2024/02/28 23:58:14.547 +08:00] [INFO] [ComputeLabelHolder.cpp:47] [\"get cluster id: unknown\"] [thread_id=1]")
     print(ex.features, ex.digest())
+    ex = LogItemExtractor(ctx, '''[2024/02/28 23:58:15.045 +08:00] [DEBUG] [DMVersionFilterBlockInputStream.h:86] ["Total rows: 0, pass: -nan%, complete pass: -nan%, complete not pass: -nan%, not clean: -nan%, is deleted: -nan%, effective: -nan%, start_ts: 0"] [source="mode=COMPACT"] [thread_id=148]''')
+    print(ex.features, ex.digest())
     
 if __name__ == '__main__':
     # test_dsu()
     # exit()
-    # test_digest()
+    test_digest()
     # exit()
     ctx = Context()
     f = open("samples/snap1.txt", "r")
