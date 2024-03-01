@@ -82,6 +82,7 @@ class DSU:
         self.fa = {}
         self.nodes = set()
         self.prec = {}
+        self._fathers = []
         self.need_reprec = True
 
     def find(self, x):
@@ -101,9 +102,15 @@ class DSU:
             self.fa[x] = x
             self.nodes.add(x)
 
+    def fathers(self):
+        assert not self.need_reprec
+        return self._fathers
+
     def prehandle(self):
         for x in self.nodes:
             self.prec[x] = self.find(x)
+            if self.prec[x] == x:
+                self._fathers.append(x)
         self.need_reprec = False
 
 class Context:
@@ -113,6 +120,10 @@ class Context:
     def joint_summary(self, a, b):
         s1 = a.summary()
         s2 = b.summary()
+        ctx.digest_tree.prehandle()
+        n1 = len(a.lines)
+        n2 = len(b.lines)
+        print("n1", n1, "n2", n2)
         keys = set(list(s1.keys()) + list(s2.keys()))
         only_in_s1 = []
         only_in_s2 = []
@@ -121,6 +132,12 @@ class Context:
                 only_in_s1.append((k, a.digests_family[k]))
             elif k in s2 and not k in s1:
                 only_in_s2.append((k, b.digests_family[k]))
+        
+        freq_fa = {}
+        for fa in ctx.digest_tree.fathers():
+            f1 = len(s1[fa]) if fa in s1 else 0
+            f2 = len(s2[fa]) if fa in s2 else 0
+            freq_fa[fa] = (f1, f2)
 
         f = open("joint.md", "w")
         f.write("\n====== Abnormal logs on Left ======\n".format(k))
@@ -137,6 +154,11 @@ class Context:
             for x in l:
                 f.write("{}\n".format(x.replace("\n", "")))
             f.write("```\n")
+
+        f.write("\n\n====== Abnormal log frequency change ======\n".format(k))
+        for (k, (f1, f2)) in freq_fa.items():
+            if f1 + f2 > 0 and abs(f1 - f2) / (f1 + f2) > 0.01:
+                f.write("{}\n".format(k.replace("\n", "")))
         f.close()
 
 class LogItemExtractorOpts:
@@ -184,7 +206,7 @@ class LogItemExtractor:
 class LogSummary:
     def __init__(self, ctx, lines):
         self.ctx = ctx
-        self.lines = []
+        self.lines = lines
         self.digests = {}
         self.digests_family = {}
         self.features = []
@@ -209,7 +231,7 @@ class LogSummary:
                 if distance(d, dt) < min(len(d), len(dt)) * 0.5:
                     ctx.digest_tree.union(d, dt)
 
-        ctx.digest_tree.prehandle()
+        # ctx.digest_tree.prehandle()
         # prepared = [(ctx.digest_tree.find(d), v) for (d, v) in self.digests.items()]
         # return {key: sum(j for i, j in group) for key, group in groupby(prepared, key=lambda x: x[0])}
         return self.digests
